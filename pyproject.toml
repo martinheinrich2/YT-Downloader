@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "yt-downloader"
+version = "0.1.0"
+description = "Youtube Downloader written in Python"
+authors = ["Martin.Heinrich <75615821+martinheinrich2@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+pyside6 = "^6.6.1"
+pytube = "^15.0.0"
+requests = "^2.31.0"
+validators = "^0.22.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
