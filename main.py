@@ -1,3 +1,12 @@
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QComboBox, QProgressBar, QStyleFactory
+from PySide6.QtCore import Slot, QRunnable, QThreadPool, QTimer, QObject, Signal, Qt
+from PySide6.QtGui import QImage, QPixmap
+from pytube import YouTube
+from pytube.exceptions import VideoUnavailable, VideoPrivate, AgeRestrictedError, MembersOnly
+
+import requests
+import validators
+
 import os
 import sys
 import traceback
@@ -6,31 +15,20 @@ import shlex
 import shutil
 import json
 from threading import Thread
-import requests
-import validators
 import time
 import tempfile
 import platform
-from io import StringIO
-
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QComboBox, QProgressBar, QStyleFactory
-from PySide6.QtCore import Slot, QRunnable, QThreadPool, QTimer, QObject, Signal, Qt
-from PySide6.QtGui import QImage, QPixmap
-from pytube import YouTube
-from pytube.exceptions import VideoUnavailable, VideoPrivate, AgeRestrictedError, MembersOnly
 
 from mainwindow import Ui_MainWindow
 
-# FFMPEG_PATH = 'ffmpeg'
-# FFPROBE_PATH = 'ffprobe'
-# Test if ffmpeg and ffprobe are somewhere on the system
+# Test if ffmpeg and ffprobe are somewhere on the system and set the path
 if shutil.which("ffmpeg"):
     FFMPEG_PATH = shutil.which("ffmpeg")
     print(f'Setting ffmpeg path to: {shutil.which("ffmpeg")}')
 elif os.path.isfile('ffmpeg'):
     FFMPEG_PATH = 'ffmpeg'
 else:
-    print(f'FFMPEG is not installed!')
+    print(f'FFMPEG is not found! Please install ffmpeg.')
 
 if shutil.which("ffprobe"):
     FFPROBE_PATH = shutil.which("ffprobe")
@@ -38,7 +36,7 @@ if shutil.which("ffprobe"):
 elif os.path.isfile('ffprobe'):
     FFPROBE_PATH = 'ffprobe'
 else:
-    print(f'FFPROBE is not installed.')
+    print(f'FFPROBE is not found. Please install ffprobe.')
 
 
 class WorkerSignals(QObject):
@@ -104,8 +102,6 @@ class MainWindow(QMainWindow):
     # Change init function
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-        # def __init__(self, parent=None):
-        #     super().__init__(parent)
         # Create variables
         self.ffmpeg_string = None
         self.video_stream = None
@@ -186,7 +182,6 @@ class MainWindow(QMainWindow):
                 except AgeRestrictedError:
                     self.statusBar().showMessage(f'Video is age restricted.')
                 self.streams = self.yt.streams
-                # self.streams_a = self.yt.streams.filter(adaptive=True)
                 self.image.loadFromData(requests.get(thumbnail_url).content)
                 self.image_label.setPixmap(QPixmap(self.image).scaledToWidth(331))
                 for stream in self.streams:
@@ -219,8 +214,7 @@ class MainWindow(QMainWindow):
         The download worker calls the download video function and handles all the thread signals
         :return: worker finished status
         """
-        # Gets called by the button clicked signal
-        # Pass the function to execute
+        # Gets called by the button clicked signal. Pass the function to execute.
         worker = Worker(self.download_video)
         worker.signals.result.connect(self.print_output)
         worker.signals.finished.connect(self.download_complete)
@@ -268,31 +262,14 @@ class MainWindow(QMainWindow):
         # Execute ffprobe (to show streams), and get the output in JSON format
         # Actually counts packets instead of frames, but it is much faster
         # https://stackoverflow.com/questions/2017843/fetch-frame-count-with-ffmpeg/28376817#28376817
-
-        # ffprobe_codec_string = f'ffprobe -loglevel error -show_entries stream=codec_type -of csv=p=0 {video_filename}'
-        # data_codec = os.popen(ffprobe_codec_string).read()
-        # # If file has audio codec, no merging is required.
-        # if "audio" in data_codec:
-        #     print("stream has audio, no merging")
-        #     self.ffmpeg_string = f'ffmpeg -y -loglevel error -i {video_filename} -codec: copy -progress pipe:1'
-        # elif "video" in data_codec:
-        #     print("stream has only video, merging required")
-        #     self.ffmpeg_string = f'ffmpeg -y -loglevel error -i {video_filename} -i {audio_filename} -codec:v copy -codec:a copy -progress pipe:1'
-        # else:
-        #     print("unknown codec")
-
         # Get number of frames with ffprobe and store the result in a dictionary.
         ffprobe_string = f'ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 -of json {video_filename}'
         data = sp.run(shlex.split(ffprobe_string), stdout=sp.PIPE).stdout
-        # data = sp.run(shlex.split(
-        #     'ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 -of json vid.mp4'),
-        #               stdout=sp.PIPE).stdout
         dict = json.loads(data)  # Convert data from JSON string to dictionary
         tot_n_frames = float(dict['streams'][0]['nb_read_packets'])  # Get the total number of frames.
 
-        # Execute FFmpeg as sub-process with stdout as a pipe
-        # Redirect progress to stdout using -progress pipe:1 arguments
-        # Create string to call ffmpeg with all required parameters
+        # Execute FFmpeg as sub-process with stdout as a pipe. Redirect progress to stdout using -progress pipe:1
+        # arguments. Create string to call ffmpeg with all required parameters.
         self.ffmpeg_string = f'ffmpeg -y -loglevel error -i {video_filename} -i {audio_filename} -codec:v copy -codec:a copy -progress pipe:1'
         # self.ffmpeg_string = f'ffmpeg -y -loglevel error -i {video_filename} -i {audio_filename} -codec: copy -progress pipe:1'
         string1 = shlex.split(self.ffmpeg_string)
@@ -357,7 +334,6 @@ class MainWindow(QMainWindow):
         print(f"Progress: {n}")
         return
 
-
     def print_output(self, s):
         print(f'Print output: {s}')
         return
@@ -370,7 +346,6 @@ class MainWindow(QMainWindow):
         self.progress.setValue(0)
         self.progress.setFormat("Download complete!")
         return
-
 
     def dragEnterEvent(self, event) -> None:
         """
