@@ -9,7 +9,7 @@ readme = "README.md"
 python = ">=3.11,<3.13"
 pyside6 = "^6.6.1"
 pytube = "^15.0.0"
-requests = "^2.31.0"
+requests = "^2.32.4"
 validators = "^0.22.0"
 
 
